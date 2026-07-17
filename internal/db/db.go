@@ -10,8 +10,6 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-// Open opens (creating if necessary) the SQLite database at path, enables WAL
-// mode and foreign keys, and runs migrations.
 func Open(path string) (*gorm.DB, error) {
 	dsn := fmt.Sprintf("file:%s?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)", path)
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{

@@ -8,8 +8,6 @@ import (
 	"github.com/Kartik-2239/openai-proxy/internal/utils"
 )
 
-// Middleware authenticates requests by hashing the presented bearer token and
-// looking it up among the users' API key hashes.
 func Middleware(store *db.Store) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

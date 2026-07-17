@@ -8,18 +8,14 @@ import (
 	"gorm.io/gorm"
 )
 
-// ErrNotFound is returned when a queried row does not exist.
 var ErrNotFound = gorm.ErrRecordNotFound
 
-// Store provides the data access layer over the proxy database.
 type Store struct {
 	db *gorm.DB
 }
 
 func NewStore(db *gorm.DB) *Store { return &Store{db: db} }
 
-// CreateUser validates and inserts a new user, applying the default rate
-// limit when none is set.
 func (s *Store) CreateUser(ctx context.Context, user *User) error {
 	if user.Name == "" || user.APIKeyHash == "" {
 		return fmt.Errorf("name and api_key_hash cannot be empty")
@@ -59,5 +55,3 @@ func (s *Store) UpdateUserUsage(ctx context.Context, id uint, tokens int64) erro
 	}
 	return nil
 }
-
-
