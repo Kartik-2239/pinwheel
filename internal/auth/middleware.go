@@ -52,9 +52,9 @@ func Middleware(store *db.Store) func(http.Handler) http.Handler {
 			var v map[string]any
 			json.Unmarshal(body, &v)
 
-			for key, value := range v {
-				fmt.Printf("%s: %v\n", key, value)
-			}
+			// for key, value := range v {
+			// 	fmt.Printf("%s: %v\n", key, value)
+			// }
 
 			model, isModel, err := IsModelAllowed(user, v["model"].(string))
 			fmt.Println("Model", model, isModel)
@@ -66,14 +66,10 @@ func Middleware(store *db.Store) func(http.Handler) http.Handler {
 				http.Error(w, "Forbidden Model", http.StatusForbidden)
 				return
 			}
-			if err != nil {
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
 
-			for key, value := range v {
-				fmt.Printf("%s: %v\n", key, value)
-			}
+			// for key, value := range v {
+			// 	fmt.Printf("%s: %v\n", key, value)
+			// }
 			r.Body = io.NopCloser(strings.NewReader(string(body)))
 			r.ContentLength = int64(len(body))
 			r.Header.Set("Content-Length", fmt.Sprintf("%d", len(body)))

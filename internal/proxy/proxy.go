@@ -18,7 +18,7 @@ func New(store *db.Store) *httputil.ReverseProxy {
 	if err != nil {
 		return nil
 	}
-	// r.Header.Set()
+
 	p := &httputil.ReverseProxy{
 		Rewrite: func(pr *httputil.ProxyRequest) {
 			body, err := io.ReadAll(pr.In.Body)
@@ -34,11 +34,13 @@ func New(store *db.Store) *httputil.ReverseProxy {
 				pr.Out.Body = io.NopCloser(pr.In.Body)
 				return
 			}
-			baseurl, err := store.GetBaseURLForModel(context, model, pr.In.Header.Get("Authorization"))
+			baseurl, modelname, err := store.GetBaseURLForModel(context, model, pr.In.Header.Get("Authorization"))
 			if err != nil {
 				pr.Out.Body = io.NopCloser(pr.In.Body)
 				return
 			}
+			v["model"] = modelname
+			body, _ = json.Marshal(v)
 			u, _ := url.Parse(baseurl)
 			pr.Out.Body = io.NopCloser(strings.NewReader(string(body)))
 			pr.Out.ContentLength = int64(len(body))
