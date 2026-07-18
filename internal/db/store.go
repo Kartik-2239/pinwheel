@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -29,7 +30,7 @@ func (s *Store) CreateUser(ctx context.Context, user *User) error {
 
 func (s *Store) GetUserByHash(ctx context.Context, apiKeyHash string) (*User, error) {
 	var user User
-	if err := s.db.WithContext(ctx).Where("api_key_hash = ?", apiKeyHash).First(&user).Error; err != nil {
+	if err := s.db.WithContext(ctx).Preload("AllowedProviders").Preload("AllowedModels.Provider").Where("api_key_hash = ?", apiKeyHash).First(&user).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil
@@ -42,6 +43,7 @@ func (s *Store) ListUsers(ctx context.Context) ([]User, error) {
 }
 
 // UpdateUserUsage increments the user's token counter and stamps last_used_at.
+// this is temporary
 func (s *Store) UpdateUserUsage(ctx context.Context, id uint, tokens int64) error {
 	res := s.db.WithContext(ctx).Model(&User{}).Where("id = ?", id).Updates(map[string]any{
 		"tokens_used":  gorm.Expr("tokens_used + ?", tokens),
@@ -54,4 +56,17 @@ func (s *Store) UpdateUserUsage(ctx context.Context, id uint, tokens int64) erro
 		return ErrNotFound
 	}
 	return nil
+}
+
+func (s *Store) GetBaseURLForModel(ctx context.Context, modelName string, authorization string) (string, error) {
+	authorization = strings.TrimPrefix(authorization, "Bearer ")
+	var model Model
+	result := s.db.WithContext(ctx).Preload("Provider").Where("model = ?", modelName).First(&model)
+	if result.Error != nil {
+		return "", result.Error
+	}
+	if model.Provider.BaseURL == "" {
+		return "", fmt.Errorf("provider base URL not found for model: %s", modelName)
+	}
+	return model.Provider.BaseURL, nil
 }

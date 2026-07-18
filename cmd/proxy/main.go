@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/Kartik-2239/openai-proxy/internal/auth"
 	"github.com/Kartik-2239/openai-proxy/internal/db"
@@ -22,10 +23,22 @@ func main() {
 	}
 	store := db.NewStore(database)
 
-	p := proxy.New("http://127.0.0.1:8000")
+	p := proxy.New(store)
 	middleware := auth.Middleware(store)
 	handler := middleware(p)
 
-	log.Println("listening on :8080")
-	log.Fatal(http.ListenAndServe(":8080", handler))
+	mux := http.NewServeMux()
+
+	mux.Handle("/", handler)
+
+	server := &http.Server{
+		Addr:         ":8081",
+		Handler:      mux,
+		ReadTimeout:  60 * time.Second,
+		WriteTimeout: 60 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
+	log.Println("listening on :8081")
+	log.Fatal(server.ListenAndServe())
 }

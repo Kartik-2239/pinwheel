@@ -21,7 +21,7 @@ func Open(path string) (*gorm.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open database: %w", err)
 	}
-	if err := db.AutoMigrate(&User{}); err != nil {
+	if err := db.AutoMigrate(&User{}, &Usage{}, &Provider{}, &Model{}); err != nil {
 		return nil, fmt.Errorf("migrate database: %w", err)
 	}
 	return db, nil
