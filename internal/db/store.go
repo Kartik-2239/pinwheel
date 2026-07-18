@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Kartik-2239/openai-proxy/internal/utils"
 	"gorm.io/gorm"
 )
 
@@ -81,4 +82,42 @@ func (s *Store) GetBaseURLForModel(ctx context.Context, modelName string, author
 		}
 	}
 	return "", "", fmt.Errorf("model %s not found", modelName)
+}
+
+func (s *Store) CreateUsage(ctx context.Context, apiKey string, modelName string, tokensIn int64, tokensOut int64) error {
+	apiKey = strings.TrimPrefix(apiKey, "Bearer ")
+	if apiKey == "" {
+		return fmt.Errorf("api key cannot be empty")
+	}
+
+	var user User
+	if err := s.db.WithContext(ctx).Where("api_key_hash = ?", utils.HashString(apiKey)).First(&user).Error; err != nil {
+		return err
+	}
+
+	provider := "unknown"
+	var model Model
+	if err := s.db.WithContext(ctx).Preload("Provider").Where("model = ?", modelName).First(&model).Error; err == nil && model.Provider.Name != "" {
+		provider = model.Provider.Name
+	} else if parts := strings.SplitN(modelName, "/", 2); len(parts) == 2 {
+		provider = parts[0]
+	}
+
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&Usage{
+			UserID:    user.ID,
+			CreatedAt: time.Now().UTC(),
+			Provider:  provider,
+			Model:     modelName,
+			TokensIn:  tokensIn,
+			TokensOut: tokensOut,
+		}).Error; err != nil {
+			return err
+		}
+
+		return tx.Model(&User{}).Where("id = ?", user.ID).Updates(map[string]any{
+			"tokens_used":  gorm.Expr("tokens_used + ?", tokensIn+tokensOut),
+			"last_used_at": time.Now().UTC(),
+		}).Error
+	})
 }
