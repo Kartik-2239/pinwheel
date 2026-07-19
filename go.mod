@@ -1,4 +1,4 @@
-module github.com/Kartik-2239/openai-proxy
+module github.com/Kartik-2239/pinwheel
 
 go 1.25.0
 

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Kartik-2239/openai-proxy/internal/utils"
+	"github.com/Kartik-2239/pinwheel/internal/utils"
 )
 
 func testStore(t *testing.T) *Store {
@@ -89,5 +89,3 @@ func TestUpdateUserUsage(t *testing.T) {
 		t.Fatalf("expected ErrNotFound for unknown id, got %v", err)
 	}
 }
-
-

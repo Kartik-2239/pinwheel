@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Kartik-2239/openai-proxy/internal/db"
-	"github.com/Kartik-2239/openai-proxy/internal/utils"
+	"github.com/Kartik-2239/pinwheel/internal/db"
+	"github.com/Kartik-2239/pinwheel/internal/utils"
 )
 
 // curl https://<base_url>/chat/completions \

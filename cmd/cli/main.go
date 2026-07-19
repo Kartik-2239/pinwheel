@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Kartik-2239/openai-proxy/internal/cli"
+	"github.com/Kartik-2239/pinwheel/internal/cli"
 )
 
 func main() {

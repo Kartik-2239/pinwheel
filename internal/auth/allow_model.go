@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Kartik-2239/openai-proxy/internal/db"
+	"github.com/Kartik-2239/pinwheel/internal/db"
 )
 
 func IsModelAllowed(user *db.User, model string) (string, bool, error) {

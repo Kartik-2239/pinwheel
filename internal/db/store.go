@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Kartik-2239/openai-proxy/internal/utils"
+	"github.com/Kartik-2239/pinwheel/internal/utils"
 	"gorm.io/gorm"
 )
 

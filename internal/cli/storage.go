@@ -8,8 +8,8 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/Kartik-2239/openai-proxy/internal/db"
-	"github.com/Kartik-2239/openai-proxy/internal/utils"
+	"github.com/Kartik-2239/pinwheel/internal/db"
+	"github.com/Kartik-2239/pinwheel/internal/utils"
 )
 
 func createAPIKey(database *gorm.DB, name string, choices []modelChoice, costLimit *int64, expiration *time.Time) (string, error) {

@@ -12,7 +12,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Kartik-2239/openai-proxy/internal/db"
+	"github.com/Kartik-2239/pinwheel/internal/db"
 	"github.com/joho/godotenv"
 )
 

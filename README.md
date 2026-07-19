@@ -1,5 +1,5 @@
 
-# OpenAI Proxy
+# Pinwheel
 
 A reverse proxy written in GO for LLM APIs. It allows you to create local proxy API keys and allow users to access certain models at optional limits such as max cost and expiration date.
 

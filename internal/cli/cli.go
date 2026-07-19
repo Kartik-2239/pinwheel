@@ -10,7 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"gorm.io/gorm"
 
-	"github.com/Kartik-2239/openai-proxy/internal/db"
+	"github.com/Kartik-2239/pinwheel/internal/db"
 )
 
 type screen int

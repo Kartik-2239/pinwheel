@@ -6,9 +6,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/Kartik-2239/openai-proxy/internal/auth"
-	"github.com/Kartik-2239/openai-proxy/internal/db"
-	"github.com/Kartik-2239/openai-proxy/internal/proxy"
+	"github.com/Kartik-2239/pinwheel/internal/auth"
+	"github.com/Kartik-2239/pinwheel/internal/db"
+	"github.com/Kartik-2239/pinwheel/internal/proxy"
 )
 
 func main() {
