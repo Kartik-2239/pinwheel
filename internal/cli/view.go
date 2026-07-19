@@ -51,7 +51,6 @@ func mainOptionLabels() []string {
 }
 
 func (m model) providerStatus(b *strings.Builder) {
-	b.WriteString("\n")
 	for _, def := range providerDefs {
 		status := errorStyle.Render("missing")
 		if m.hasProvider(def.Name) {

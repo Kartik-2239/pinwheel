@@ -57,7 +57,7 @@ func saveAllowedModels(database *gorm.DB, choices []modelChoice) ([]db.Provider,
 }
 
 func ensureProvider(database *gorm.DB, def providerDef) (db.Provider, error) {
-	provider := db.Provider{Name: def.Name, BaseURL: def.BaseURL}
+	provider := db.Provider{Name: def.Name, BaseURL: def.BaseURL, EnvKey: def.EnvKey}
 	err := database.Where("name = ?", def.Name).First(&provider).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return provider, database.Create(&provider).Error

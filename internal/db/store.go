@@ -59,29 +59,28 @@ func (s *Store) UpdateUserUsage(ctx context.Context, id uint, tokens int64) erro
 	return nil
 }
 
-func (s *Store) GetBaseURLForModel(ctx context.Context, modelName string, authorization string) (string, string, error) {
-	authorization = strings.TrimPrefix(authorization, "Bearer ")
+func (s *Store) GetModelFromName(ctx context.Context, modelName string) (Model, error) {
 	var models []Model
 	result := s.db.WithContext(ctx).Preload("Provider").Find(&models)
 
 	if result.Error != nil {
-		return "", "", result.Error
+		return Model{}, result.Error
 	}
 
 	if len(models) == 0 {
-		return "", "", fmt.Errorf("no models found in the database")
+		return Model{}, fmt.Errorf("no models found in the database")
 	}
 
 	for _, model := range models {
 		if model.Model == modelName {
-			return model.Provider.BaseURL, model.Model, nil
+			return model, nil
 		}
 		parts := strings.Split(model.Model, "/")
 		if len(parts) == 2 && parts[1] == modelName {
-			return model.Provider.BaseURL, model.Model, nil
+			return model, nil
 		}
 	}
-	return "", "", fmt.Errorf("model %s not found", modelName)
+	return Model{}, fmt.Errorf("model %s not found", modelName)
 }
 
 func (s *Store) CreateUsage(ctx context.Context, apiKey string, modelName string, tokensIn int64, tokensOut int64) error {

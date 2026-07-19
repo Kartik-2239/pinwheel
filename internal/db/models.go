@@ -41,6 +41,7 @@ type Provider struct {
 	ID      uint   `gorm:"primaryKey"`
 	Name    string `gorm:"unique;not null"`
 	BaseURL string `gorm:"not null"`
+	EnvKey  string `gorm:"not null"`
 }
 
 type Model struct {

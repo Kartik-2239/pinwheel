@@ -39,22 +39,22 @@ func New(store *db.Store) *httputil.ReverseProxy {
 				pr.Out.Body = io.NopCloser(pr.In.Body)
 				return
 			}
-			baseurl, modelname, err := store.GetBaseURLForModel(context, model, pr.In.Header.Get("Authorization"))
+			newModel, err := store.GetModelFromName(context, model) //, pr.In.Header.Get("Authorization"))
 			if err != nil {
 				pr.Out.Body = io.NopCloser(pr.In.Body)
 				return
 			}
-			v["model"] = modelname
-			modeltop = modelname
+			v["model"] = newModel.Model
+			modeltop = newModel.Model
 			apiKeyTop = pr.In.Header.Get("Authorization")
 			body, _ = json.Marshal(v)
-			u, _ := url.Parse(baseurl)
+			u, _ := url.Parse(newModel.Provider.BaseURL)
 			pr.Out.Body = io.NopCloser(strings.NewReader(string(body)))
 			pr.Out.ContentLength = int64(len(body))
 			pr.Out.Header.Set("Content-Length", fmt.Sprintf("%d", len(body)))
 			pr.SetURL(u)
 			pr.Out.Host = u.Host
-			pr.Out.Header.Set("Authorization", fmt.Sprintf("Bearer %s", os.Getenv("API_KEY")))
+			pr.Out.Header.Set("Authorization", fmt.Sprintf("Bearer %s", os.Getenv(newModel.Provider.EnvKey)))
 		},
 		ModifyResponse: func(r *http.Response) error {
 			r.Body = &transformReader{r: r.Body, store: store, model: modeltop, apiKey: apiKeyTop, ctx: r.Request.Context()}
