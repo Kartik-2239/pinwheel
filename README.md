@@ -1,3 +1,2 @@
 - [ ] Make an interactive cli for setup
-- [ ] Make a cli for allowing config through flags
 - [ ] add a /models endpoint
