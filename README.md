@@ -1,3 +1,4 @@
 - [ ] rate limiting option in cli
 - [ ] implement rate limiting
 - [ ] give option to select for rate limiting such as ( 5 hr rolling, weekly, monthly ) , ( cost limit ), ( expiration date )
+- [ ] /models endpoint
