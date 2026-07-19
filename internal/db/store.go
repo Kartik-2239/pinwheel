@@ -83,7 +83,7 @@ func (s *Store) GetModelFromName(ctx context.Context, modelName string) (Model, 
 	return Model{}, fmt.Errorf("model %s not found", modelName)
 }
 
-func (s *Store) CreateUsage(ctx context.Context, apiKey string, modelName string, tokensIn int64, tokensOut int64) error {
+func (s *Store) CreateUsage(ctx context.Context, apiKey string, modelName string, tokensIn int64, tokensOut int64, costMicros *int64) error {
 	apiKey = strings.TrimPrefix(apiKey, "Bearer ")
 	if apiKey == "" {
 		return fmt.Errorf("api key cannot be empty")
@@ -104,12 +104,13 @@ func (s *Store) CreateUsage(ctx context.Context, apiKey string, modelName string
 
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&Usage{
-			UserID:    user.ID,
-			CreatedAt: time.Now().UTC(),
-			Provider:  provider,
-			Model:     modelName,
-			TokensIn:  tokensIn,
-			TokensOut: tokensOut,
+			UserID:     user.ID,
+			CreatedAt:  time.Now().UTC(),
+			Provider:   provider,
+			Model:      modelName,
+			TokensIn:   tokensIn,
+			TokensOut:  tokensOut,
+			CostMicros: *costMicros,
 		}).Error; err != nil {
 			return err
 		}
@@ -119,4 +120,13 @@ func (s *Store) CreateUsage(ctx context.Context, apiKey string, modelName string
 			"last_used_at": time.Now().UTC(),
 		}).Error
 	})
+}
+
+func (s *Store) GetTotalCost(ctx context.Context, userID uint) (int64, error) {
+	var totalCost int64
+	err := s.db.WithContext(ctx).Model(&Usage{}).Where("user_id = ?", userID).Select("SUM(cost_micros)").Scan(&totalCost).Error
+	if err != nil {
+		return 0, err
+	}
+	return totalCost, nil
 }

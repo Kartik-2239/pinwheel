@@ -32,10 +32,23 @@ func (m model) View() string {
 		m.modelList(&b)
 	case screenProviderStatus:
 		m.providerStatus(&b)
+	case screenAPIKeyLimits:
+		fmt.Fprintf(&b, "Select API key limits:\n\n")
+		for i, option := range apiKeyLimitsOptions {
+			b.WriteString(limitRow(i == m.cursor, option.Label, m.apiKeyLimitSelections[option.screen]))
+		}
+		fmt.Fprintf(&b, "\n%s", helpStyle.Render("space add/remove • enter continue • ↑/↓ move • q quit"))
+	case screenApiKeyCostLimit:
+		fmt.Fprintf(&b, "Total cost budget:\n\n%s\n\n%s", m.apiKeyCostInput.View(), helpStyle.Render("digits only • enter continue • q quit"))
+	case screenApiKeyExpiration:
+		fmt.Fprintf(&b, "Expiration:\n\n")
+		for i, option := range expirationOptions {
+			b.WriteString(row(i == m.cursor, option.Label, false))
+		}
+		fmt.Fprintf(&b, "\n%s", helpStyle.Render("↑/↓ move • enter create key • q quit"))
 	case screenDone:
-		fmt.Fprintf(&b, "%s\n\n", selectedStyle.Render("Done."))
 		if m.generatedKey != "" {
-			fmt.Fprintf(&b, "New API key:\n\n%s\n\n%s", m.generatedKey, helpStyle.Render("Copy it now. Only the hash was stored."))
+			fmt.Fprintf(&b, "New API key for %s\n\n%s\n\n%s", selectedStyle.Render(m.apiKeyName), m.generatedKey, helpStyle.Render("Copy the key now. It will not be shown again."))
 		}
 		fmt.Fprintf(&b, "\n\n%s", helpStyle.Render("enter main menu • q quit"))
 	}
@@ -97,6 +110,14 @@ func menu(b *strings.Builder, items []string, cursor int) {
 		b.WriteString(row(i == cursor, item, false))
 	}
 	fmt.Fprintf(b, "\n%s", helpStyle.Render("↑/↓ move • enter select • q quit"))
+}
+
+func limitRow(focused bool, label string, checked bool) string {
+	mark := "[ ] "
+	if checked {
+		mark = selectedStyle.Render("[x] ")
+	}
+	return row(focused, mark+label, false)
 }
 
 func row(focused bool, label string, checked bool) string {

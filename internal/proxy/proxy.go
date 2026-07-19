@@ -101,15 +101,21 @@ func (tr *transformReader) Read(p []byte) (n int, err error) {
 				var v map[string]any
 				json.Unmarshal([]byte(tr.l), &v)
 				if usageData, ok := v["usage"].(map[string]any); ok {
+					cost, ok := usageData["cost"].(float64)
+					var costmicros *int64
+					if ok && cost > 0 {
+						c := int64(cost * 1e6)
+						costmicros = &c
+					}
 					usage := usage{
 						PromptTokens:     int64(usageData["prompt_tokens"].(float64)),
 						CompletionTokens: int64(usageData["completion_tokens"].(float64)),
 						TotalTokens:      int64(usageData["total_tokens"].(float64)),
 					}
-					fmt.Printf("Usage: %+v\n", usage)
+					// fmt.Printf("Usage: %+v\n", usage)
 					tr.done = true
 
-					if err := tr.store.CreateUsage(tr.ctx, tr.apiKey, tr.model, usage.PromptTokens, usage.CompletionTokens); err != nil {
+					if err := tr.store.CreateUsage(tr.ctx, tr.apiKey, tr.model, usage.PromptTokens, usage.CompletionTokens, costmicros); err != nil {
 						fmt.Printf("CreateUsage error: %v\n", err)
 					}
 

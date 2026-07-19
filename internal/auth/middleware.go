@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/Kartik-2239/openai-proxy/internal/db"
 	"github.com/Kartik-2239/openai-proxy/internal/utils"
@@ -52,9 +53,22 @@ func Middleware(store *db.Store) func(http.Handler) http.Handler {
 			var v map[string]any
 			json.Unmarshal(body, &v)
 
-			// for key, value := range v {
-			// 	fmt.Printf("%s: %v\n", key, value)
-			// }
+			if user.Expiration != nil && user.Expiration.Before(time.Now()) {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+
+			if user.MaxCostMicros != nil {
+				totalCostMicro, err := store.GetTotalCost(r.Context(), user.ID)
+				if err != nil {
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					return
+				}
+				if totalCostMicro >= *user.MaxCostMicros {
+					http.Error(w, "Forbidden: Limit exceeded", http.StatusForbidden)
+					return
+				}
+			}
 
 			model, isModel, err := IsModelAllowed(user, v["model"].(string))
 			fmt.Println("Model", model, isModel)

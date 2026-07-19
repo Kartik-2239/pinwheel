@@ -16,9 +16,11 @@ type User struct {
 	LastUsedAt  *time.Time // nil until first use
 	CreatedAt   time.Time  `gorm:"autoCreateTime"`
 
-	RateLimit5hr *int   // requests per 5-hour window
-	MaxTokens    *int64 // total token budget
-	TokensUsed   int64  `gorm:"not null;default:0"`
+	RateLimit5hr  *int   // requests per 5-hour window
+	MaxTokens     *int64 // total token budget
+	TokensUsed    int64  `gorm:"not null;default:0"`
+	MaxCostMicros *int64 // total cost budget in millionths of a dollar
+	Expiration    *time.Time
 
 	AllowedProviders []Provider `gorm:"many2many:user_providers;"`
 	AllowedModels    []Model    `gorm:"many2many:user_models;"`
@@ -33,6 +35,7 @@ type Usage struct {
 	TokensIn   int64     `gorm:"not null;default:0"`
 	TokensOut  int64     `gorm:"not null;default:0"`
 	CostMicros int64     `gorm:"not null;default:0"` // 1 millionth of a dollar
+	IsActive   bool      `gorm:"not null;default:true"`
 
 	User *User `gorm:"constraint:OnDelete:CASCADE"`
 }

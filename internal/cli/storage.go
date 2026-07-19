@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -11,7 +12,7 @@ import (
 	"github.com/Kartik-2239/openai-proxy/internal/utils"
 )
 
-func createAPIKey(database *gorm.DB, name string, choices []modelChoice) (string, error) {
+func createAPIKey(database *gorm.DB, name string, choices []modelChoice, costLimit *int64, expiration *time.Time) (string, error) {
 	apiKey, err := generateAPIKey()
 	if err != nil {
 		return "", err
@@ -28,6 +29,8 @@ func createAPIKey(database *gorm.DB, name string, choices []modelChoice) (string
 		Last4Digits:      apiKey[len(apiKey)-4:],
 		AllowedProviders: providers,
 		AllowedModels:    models,
+		MaxCostMicros:    costLimit,
+		Expiration:       expiration,
 	}
 	return apiKey, database.Create(&user).Error
 }
