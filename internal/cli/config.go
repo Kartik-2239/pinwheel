@@ -17,6 +17,8 @@ var providerDefs = []providerDef{
 	{Name: "openrouter", BaseURL: "https://openrouter.ai/api/v1", ModelsURL: "https://openrouter.ai/api/v1/models", EnvKey: "OPENROUTER_API_KEY"},
 	{Name: "openai", BaseURL: "https://api.openai.com/v1", ModelsURL: "https://api.openai.com/v1/models", EnvKey: "OPENAI_API_KEY"},
 	{Name: "anthropic", BaseURL: "https://api.anthropic.com/v1", ModelsURL: "https://api.anthropic.com/v1/models", EnvKey: "ANTHROPIC_API_KEY"},
+	{Name: "groq", BaseURL: "https://api.groq.com/openai/v1", ModelsURL: "https://api.groq.com/openai/v1/models", EnvKey: "GROQ_API_KEY"},
+	{Name: "gemini", BaseURL: "https://generativelanguage.googleapis.com/v1beta/openai/", ModelsURL: "https://generativelanguage.googleapis.com/v1beta/openai/models", EnvKey: "GEMINI_API_KEY"},
 }
 
 func loadProviders() []providerDef {
