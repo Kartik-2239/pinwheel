@@ -29,7 +29,7 @@ type User struct {
 type Usage struct {
 	ID         uint      `gorm:"primaryKey"`
 	UserID     uint      `gorm:"index:idx_user_time,priority:1;not null"`
-	CreatedAt  time.Time `gorm:"index:idx_user_time,priority:2;not null"`
+	CreatedAt  time.Time `gorm:"autoCreateTime;index:idx_user_time,priority:2;not null"`
 	Provider   string    `gorm:"not null"`
 	Model      string    `gorm:"not null"`
 	TokensIn   int64     `gorm:"not null;default:0"`

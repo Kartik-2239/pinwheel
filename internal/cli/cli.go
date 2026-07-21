@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -94,12 +93,8 @@ var expirationOptions = []expirationOption{
 }
 
 func Run() error {
-	dbPath := os.Getenv("PROXY_DB_PATH")
-	if dbPath == "" {
-		dbPath = "proxy.db"
-	}
 
-	database, err := db.Open(dbPath)
+	database, err := db.Open()
 	if err != nil {
 		return err
 	}

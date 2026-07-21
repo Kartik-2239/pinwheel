@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-	"path/filepath"
 	"testing"
 
 	"github.com/Kartik-2239/pinwheel/internal/utils"
@@ -10,7 +9,7 @@ import (
 
 func testStore(t *testing.T) *Store {
 	t.Helper()
-	database, err := Open(filepath.Join(t.TempDir(), "test.db"))
+	database, err := Open()
 	if err != nil {
 		t.Fatalf("Open: %v", err)
 	}

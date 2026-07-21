@@ -5,14 +5,17 @@ import (
 	"log"
 	"os"
 
-	"github.com/glebarez/sqlite"
+	"github.com/joho/godotenv"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
 
-func Open(path string) (*gorm.DB, error) {
-	dsn := fmt.Sprintf("file:%s?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)", path)
-	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{
+func Open() (*gorm.DB, error) {
+	// dsn := fmt.Sprintf("file:%s?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)", path)
+	godotenv.Load()
+	dsn := os.Getenv("DATABASE_URL")
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
 		Logger: logger.New(log.New(os.Stdout, "\r\n", log.LstdFlags), logger.Config{
 			LogLevel:                  logger.Error,
 			IgnoreRecordNotFoundError: true, // auth misses are expected, don't log them

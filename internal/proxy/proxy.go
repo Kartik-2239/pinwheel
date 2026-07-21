@@ -17,10 +17,10 @@ import (
 )
 
 func New(store *db.Store) *httputil.ReverseProxy {
-	err := godotenv.Load()
-	if err != nil {
-		return nil
-	}
+	godotenv.Load()
+	// if err != nil {
+	// 	return nil
+	// }
 	var modeltop string
 	var apiKeyTop string
 

@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/Kartik-2239/pinwheel/internal/auth"
@@ -12,18 +11,18 @@ import (
 )
 
 func main() {
-	dbPath := os.Getenv("PROXY_DB_PATH")
-	if dbPath == "" {
-		dbPath = "proxy.db"
-	}
 
-	database, err := db.Open(dbPath)
+	database, err := db.Open()
 	if err != nil {
 		log.Fatalf("open database: %v", err)
 	}
 	store := db.NewStore(database)
 
 	p := proxy.New(store)
+	if p == nil {
+		log.Fatal("failed to create reverse proxy")
+		return
+	}
 	middleware := auth.Middleware(store)
 	handler := middleware(p)
 
