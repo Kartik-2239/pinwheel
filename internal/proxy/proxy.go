@@ -8,6 +8,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httputil"
+	"net/url"
+	"os"
 	"strings"
 
 	"github.com/Kartik-2239/pinwheel/internal/db"
@@ -17,8 +19,9 @@ import (
 type proxyContextKey string
 
 const (
-	ctxAPIKey proxyContextKey = "apiKey"
-	ctxModel  proxyContextKey = "model"
+	ctxAPIKey   proxyContextKey = "apiKey"
+	ctxModel    proxyContextKey = "model"
+	ctxProvider proxyContextKey = "provider"
 )
 
 func New(store *db.Store) *httputil.ReverseProxy {
@@ -68,6 +71,7 @@ func New(store *db.Store) *httputil.ReverseProxy {
 		ModifyResponse: func(r *http.Response) error {
 			apiKey, _ := r.Request.Context().Value(ctxAPIKey).(string)
 			model, _ := r.Request.Context().Value(ctxModel).(string)
+			provider, _ := r.Request.Context().Value(ctxProvider).(string)
 
 			if !strings.Contains(strings.ToLower(r.Header.Get("Content-Type")), "text/event-stream") {
 				body, err := io.ReadAll(r.Body)
@@ -88,7 +92,7 @@ func New(store *db.Store) *httputil.ReverseProxy {
 							CompletionTokens: int64(usageData["completion_tokens"].(float64)),
 							TotalTokens:      int64(usageData["total_tokens"].(float64)),
 						}
-						if err := store.CreateUsage(r.Request.Context(), apiKey, model, usage.PromptTokens, usage.CompletionTokens, &costMicros); err != nil {
+						if err := store.CreateUsage(r.Request.Context(), apiKey, model, provider, usage.PromptTokens, usage.CompletionTokens, &costMicros); err != nil {
 							fmt.Printf("CreateUsage error: %v\n", err)
 						}
 					}
@@ -98,7 +102,7 @@ func New(store *db.Store) *httputil.ReverseProxy {
 				r.Header.Set("Content-Length", fmt.Sprintf("%d", len(body)))
 				return nil
 			}
-			r.Body = &transformReader{r: r.Body, store: store, model: model, apiKey: apiKey, ctx: r.Request.Context()}
+			r.Body = &transformReader{r: r.Body, store: store, model: model, provider: provider, apiKey: apiKey, ctx: r.Request.Context()}
 			return nil
 		},
 		Transport: &transport{base: http.DefaultTransport, store: store},
@@ -113,14 +117,60 @@ type transport struct {
 
 func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	fmt.Println("==========================")
-	fmt.Print(req.URL)
-	fmt.Println(req.Body)
-	// Router(req)
-	resp, err := t.base.RoundTrip(req)
-	fmt.Println(resp.Status)
-	fmt.Println(resp.Header.Values("Content-Type"))
-	fmt.Println("==========================")
-	return resp, err
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		return nil, err
+	}
+	var v map[string]any
+	json.Unmarshal(body, &v)
+	models, err := t.store.GetModelFromName(req.Context(), v["model"].(string), req.Header.Get("Authorization"))
+	fmt.Println(models)
+	if err != nil {
+		return nil, err
+	}
+	if len(models) == 0 {
+		return nil, fmt.Errorf("model not found")
+	}
+	originalPath := req.URL.Path
+	originalAuth := req.Header.Get("Authorization")
+	baseCtx := req.Context()
+	for _, newModel := range models {
+		fmt.Println("Trying models", newModel.Model, newModel.Provider)
+		v["model"] = newModel.Model
+		body, _ = json.Marshal(v)
+		req.Body = io.NopCloser(strings.NewReader(string(body)))
+		req.ContentLength = int64(len(body))
+		req.Header.Set("Content-Length", fmt.Sprintf("%d", len(body)))
+
+		baseURL := strings.TrimRight(newModel.Provider.BaseURL, "/")
+		u, err := url.Parse(baseURL)
+		if err != nil {
+			return nil, err
+		}
+
+		req.URL.Scheme = u.Scheme
+		req.URL.Host = u.Host
+		req.URL.Path = strings.TrimRight(u.Path, "/") + "/" + strings.TrimLeft(originalPath, "/")
+		req.Host = u.Host
+		ctx := context.WithValue(baseCtx, ctxAPIKey, originalAuth)
+		ctx = context.WithValue(ctx, ctxModel, newModel.Model)
+		ctx = context.WithValue(ctx, ctxProvider, newModel.Provider.Name)
+		req = req.WithContext(ctx)
+
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", os.Getenv(newModel.Provider.EnvKey)))
+
+		fmt.Println(req.URL.String())
+
+		resp, err := t.base.RoundTrip(req)
+		if resp.StatusCode == 200 {
+			fmt.Println(resp.Status)
+			fmt.Println(resp.Header.Values("Content-Type"))
+			fmt.Println("==========================")
+			return resp, err
+		}
+		fmt.Println(resp.Status)
+	}
+	return nil, fmt.Errorf("no models available")
 }
 
 type usage struct {
@@ -130,14 +180,15 @@ type usage struct {
 }
 
 type transformReader struct {
-	r      io.ReadCloser
-	buf    []byte
-	l      string
-	done   bool
-	store  *db.Store
-	model  string
-	apiKey string
-	ctx    context.Context
+	r        io.ReadCloser
+	buf      []byte
+	l        string
+	done     bool
+	store    *db.Store
+	model    string
+	apiKey   string
+	ctx      context.Context
+	provider string
 }
 
 func (tr *transformReader) Read(p []byte) (n int, err error) {
@@ -174,7 +225,7 @@ func (tr *transformReader) Read(p []byte) (n int, err error) {
 					// fmt.Printf("Usage: %+v\n", usage)
 					tr.done = true
 
-					if err := tr.store.CreateUsage(tr.ctx, tr.apiKey, tr.model, usage.PromptTokens, usage.CompletionTokens, costmicros); err != nil {
+					if err := tr.store.CreateUsage(tr.ctx, tr.apiKey, tr.model, tr.provider, usage.PromptTokens, usage.CompletionTokens, costmicros); err != nil {
 						fmt.Printf("CreateUsage error: %v\n", err)
 					}
 

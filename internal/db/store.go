@@ -59,31 +59,35 @@ func (s *Store) UpdateUserUsage(ctx context.Context, id uint, tokens int64) erro
 	return nil
 }
 
-func (s *Store) GetModelFromName(ctx context.Context, modelName string) (Model, error) {
-	var models []Model
-	result := s.db.WithContext(ctx).Preload("Provider").Find(&models)
-
-	if result.Error != nil {
-		return Model{}, result.Error
+func (s *Store) GetModelFromName(ctx context.Context, modelName string, key string) ([]Model, error) {
+	key = strings.TrimPrefix(key, "Bearer ")
+	if key == "" {
+		return nil, fmt.Errorf("api key cannot be empty")
 	}
 
-	if len(models) == 0 {
-		return Model{}, fmt.Errorf("no models found in the database")
+	var user User
+	if err := s.db.WithContext(ctx).
+		Preload("AllowedModels.Provider").
+		Where("api_key_hash = ?", utils.HashString(key)).
+		First(&user).Error; err != nil {
+		return nil, err
 	}
-
-	for _, model := range models {
-		if model.Model == modelName {
-			return model, nil
-		}
+	models := []Model{}
+	for _, model := range user.AllowedModels {
+		qualifiedName := model.Provider.Name + "/" + model.Model
 		parts := strings.Split(model.Model, "/")
-		if len(parts) == 2 && parts[1] == modelName {
-			return model, nil
+		if strings.EqualFold(model.Model, modelName) || strings.EqualFold(qualifiedName, modelName) || len(parts) == 2 && strings.EqualFold(parts[1], modelName) {
+			// return []Model{model}, nil
+			models = append(models, model)
 		}
 	}
-	return Model{}, fmt.Errorf("model %s not found", modelName)
+	if len(models) == 0 {
+		return nil, fmt.Errorf("model %q is not allowed", modelName)
+	}
+	return models, nil
 }
 
-func (s *Store) CreateUsage(ctx context.Context, apiKey string, modelName string, tokensIn int64, tokensOut int64, costMicros *int64) error {
+func (s *Store) CreateUsage(ctx context.Context, apiKey string, modelName string, provider string, tokensIn int64, tokensOut int64, costMicros *int64) error {
 	apiKey = strings.TrimPrefix(apiKey, "Bearer ")
 	if apiKey == "" {
 		return fmt.Errorf("api key cannot be empty")
@@ -94,12 +98,16 @@ func (s *Store) CreateUsage(ctx context.Context, apiKey string, modelName string
 		return err
 	}
 
-	provider := "unknown"
-	var model Model
-	if err := s.db.WithContext(ctx).Preload("Provider").Where("model = ?", modelName).First(&model).Error; err == nil && model.Provider.Name != "" {
-		provider = model.Provider.Name
-	} else if parts := strings.SplitN(modelName, "/", 2); len(parts) == 2 {
-		provider = parts[0]
+	// var model Model
+	// if err := s.db.WithContext(ctx).Preload("Provider").Where("model = ?", modelName).First(&model).Error; err == nil && model.Provider.Name != "" {
+	// 	provider = model.Provider.Name
+	// } else if parts := strings.SplitN(modelName, "/", 2); len(parts) == 2 {
+	// 	provider = parts[0]
+	// }
+
+	cost := int64(0)
+	if costMicros != nil {
+		cost = *costMicros
 	}
 
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -110,7 +118,7 @@ func (s *Store) CreateUsage(ctx context.Context, apiKey string, modelName string
 			Model:      modelName,
 			TokensIn:   tokensIn,
 			TokensOut:  tokensOut,
-			CostMicros: *costMicros,
+			CostMicros: cost,
 		}).Error; err != nil {
 			return err
 		}

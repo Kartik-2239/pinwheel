@@ -15,6 +15,7 @@ type User struct {
 	Last4Digits string     `gorm:"column:last_4_digits;not null"`
 	LastUsedAt  *time.Time // nil until first use
 	CreatedAt   time.Time  `gorm:"autoCreateTime"`
+	Isactive    bool       `gorm:"not null;default:true"`
 
 	RateLimit5hr  *int   // requests per 5-hour window
 	MaxTokens     *int64 // total token budget
@@ -35,7 +36,7 @@ type Usage struct {
 	TokensIn   int64     `gorm:"not null;default:0"`
 	TokensOut  int64     `gorm:"not null;default:0"`
 	CostMicros int64     `gorm:"not null;default:0"` // 1 millionth of a dollar
-	IsActive   bool      `gorm:"not null;default:true"`
+	Success    bool      `gorm:"not null;default:true"`
 
 	User *User `gorm:"constraint:OnDelete:CASCADE"`
 }
