@@ -1,3 +1,4 @@
 .env
 proxy.db*
 .DS_Store
+docs/
