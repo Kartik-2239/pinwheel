@@ -3,7 +3,6 @@ package proxy
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -16,11 +15,13 @@ import (
 
 type proxyContextKey string
 
-const (
-	ctxAPIKey   proxyContextKey = "apiKey"
-	ctxModel    proxyContextKey = "model"
-	ctxProvider proxyContextKey = "provider"
-)
+const proxyCtxKey proxyContextKey = "proxyCtx"
+
+type proxyCtx struct {
+	apiKey   string
+	model    string
+	provider string
+}
 
 func New(store *db.Store) *httputil.ReverseProxy {
 	godotenv.Load()
@@ -28,9 +29,14 @@ func New(store *db.Store) *httputil.ReverseProxy {
 	p := &httputil.ReverseProxy{
 		Rewrite: func(pr *httputil.ProxyRequest) {},
 		ModifyResponse: func(r *http.Response) error {
-			apiKey, _ := r.Request.Context().Value(ctxAPIKey).(string)
-			model, _ := r.Request.Context().Value(ctxModel).(string)
-			provider, _ := r.Request.Context().Value(ctxProvider).(string)
+
+			proxyContext, ok := r.Request.Context().Value(proxyCtxKey).(proxyCtx)
+			if !ok {
+				return fmt.Errorf("proxy context not found")
+			}
+			apiKey := proxyContext.apiKey
+			model := proxyContext.model
+			provider := proxyContext.provider
 
 			if !strings.Contains(strings.ToLower(r.Header.Get("Content-Type")), "text/event-stream") {
 				body, err := io.ReadAll(r.Body)
@@ -39,26 +45,12 @@ func New(store *db.Store) *httputil.ReverseProxy {
 				}
 				r.Body.Close()
 
-				var v map[string]any
-				if err := json.Unmarshal(body, &v); err == nil {
-					if usageData, ok := v["usage"].(map[string]any); ok {
-						costMicros := int64(0)
-						if cost, ok := usageData["cost"].(float64); ok && cost > 0 {
-							costMicros = int64(cost * 1e6)
-						}
-						PromptTokens, ok := usageData["prompt_tokens"].(float64)
-						if !ok {
-							PromptTokens = 0
-						}
-						CompletionTokens, ok := usageData["completion_tokens"].(float64)
-						if !ok {
-							CompletionTokens = 0
-						}
-						if err := store.CreateUsage(r.Request.Context(), apiKey, model, provider, int64(PromptTokens), int64(CompletionTokens), &costMicros); err != nil {
-							fmt.Printf("CreateUsage error: %v\n", err)
-						}
-					}
+				err = ExtractAndStoreUsage(store, body, proxyContext, r.Request.Context())
+				if err != nil {
+					return err
 				}
+
+				// remake the body because io.ReadAll consumes it!
 				r.Body = io.NopCloser(bytes.NewReader(body))
 				r.ContentLength = int64(len(body))
 				r.Header.Set("Content-Length", fmt.Sprintf("%d", len(body)))
@@ -101,31 +93,7 @@ func (tr *transformReader) Read(p []byte) (n int, err error) {
 				if tr.done {
 					continue
 				}
-				var v map[string]any
-				json.Unmarshal([]byte(tr.l), &v)
-				if usageData, ok := v["usage"].(map[string]any); ok {
-					cost, ok := usageData["cost"].(float64)
-					var costmicros *int64
-					if ok && cost > 0 {
-						c := int64(cost * 1e6)
-						costmicros = &c
-					}
-					PromptTokens, ok := usageData["prompt_tokens"].(float64)
-					if !ok {
-						PromptTokens = 0
-					}
-					CompletionTokens, ok := usageData["completion_tokens"].(float64)
-					if !ok {
-						CompletionTokens = 0
-					}
-
-					tr.done = true
-
-					if err := tr.store.CreateUsage(tr.ctx, tr.apiKey, tr.model, tr.provider, int64(PromptTokens), int64(CompletionTokens), costmicros); err != nil {
-						fmt.Printf("CreateUsage error: %v\n", err)
-					}
-
-				}
+				err = ExtractAndStoreUsage(tr.store, []byte(tr.l), proxyCtx{apiKey: tr.apiKey, model: tr.model, provider: tr.provider}, tr.ctx)
 				continue
 			}
 			tr.l = string(line)

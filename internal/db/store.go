@@ -44,7 +44,6 @@ func (s *Store) ListUsers(ctx context.Context) ([]User, error) {
 }
 
 // UpdateUserUsage increments the user's token counter and stamps last_used_at.
-// this is temporary
 func (s *Store) UpdateUserUsage(ctx context.Context, id uint, tokens int64) error {
 	res := s.db.WithContext(ctx).Model(&User{}).Where("id = ?", id).Updates(map[string]any{
 		"tokens_used":  gorm.Expr("tokens_used + ?", tokens),
